@@ -1,0 +1,80 @@
+// ==========================================
+// SMART FRIDGE GUARD - FINAL SAFE CODE
+// Project for EEECI 2026 - TechForge
+// ==========================================
+
+const int reedSwitchPin = 2;  // Door sensor on Pin 2
+const int buzzerPin = 8;      // Buzzer on Pin 8
+const int ledPin = 9;         // LED on Pin 9
+
+unsigned long doorOpenedTime = 0;
+bool doorIsOpen = false;
+bool alarmTriggered = false;
+
+// 15000 = 15 seconds for testing. 
+// Change to 60000 for 1 minute on final demo day.
+const unsigned long WARNING_TIME = 15000; 
+
+void setup() {
+  // SAFETY: We use INPUT_PULLUP so we don't need extra resistors for the sensor.
+  pinMode(reedSwitchPin, INPUT_PULLUP); 
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  
+  // Start with everything OFF to be safe
+  digitalWrite(buzzerPin, LOW);
+  digitalWrite(ledPin, LOW);
+  
+  // Start serial monitor for debugging
+  Serial.begin(9600);
+  Serial.println("System Ready. Door is closed.");
+}
+
+void loop() {
+  // Read the door sensor
+  int sensorState = digitalRead(reedSwitchPin);
+
+  // HIGH means the magnet is away (Door is OPEN)
+  if (sensorState == HIGH) { 
+    
+    if (!doorIsOpen) {
+      // Door just opened, start the timer
+      doorOpenedTime = millis();
+      doorIsOpen = true;
+      Serial.println("Door opened. Timer started.");
+    }
+    
+    // Check how long it has been open
+    unsigned long timeOpen = millis() - doorOpenedTime;
+
+    if (timeOpen > WARNING_TIME && !alarmTriggered) {
+      // Time limit reached!
+      alarmTriggered = true;
+      Serial.println("ALARM! Door open too long!");
+    }
+    
+    // If alarm is triggered, flash LED and beep buzzer safely
+    if (alarmTriggered) {
+      digitalWrite(buzzerPin, HIGH); // Buzzer ON
+      digitalWrite(ledPin, HIGH);    // LED ON
+      delay(200);                    // Wait 0.2 seconds
+      
+      digitalWrite(buzzerPin, LOW);  // Buzzer OFF
+      digitalWrite(ledPin, LOW);     // LED OFF
+      delay(200);                    // Wait 0.2 seconds
+    }
+
+  } else { 
+    // LOW means magnet is near (Door is CLOSED)
+    
+    if (doorIsOpen) {
+      // Door just closed, reset everything
+      doorIsOpen = false;
+      alarmTriggered = false;
+      digitalWrite(buzzerPin, LOW); // Make sure buzzer is OFF
+      digitalWrite(ledPin, LOW);    // Make sure LED is OFF
+      Serial.println("Door closed. System Reset.");
+      delay(500); 
+    }
+  }  
+}  
